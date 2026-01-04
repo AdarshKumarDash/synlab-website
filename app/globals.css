@@ -30,3 +30,24 @@ body {
   50% { transform: scale(1.2); opacity: 0.5; }
 }
 .animate-pulse-slow { animation: pulse-slow 8s infinite ease-in-out; }
+
+/*WIX Template bg css*/
+@keyframes bgFloat1 {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(60px, 40px); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes bgFloat2 {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(-70px, 50px); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes bgFloat3 {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(50px, -60px); }
+  100% { transform: translate(0, 0); }
+}
+
+.animate-bg-float-1 { animation: bgFloat1 30s ease-in-out infinite; }
+.animate-bg-float-2 { animation: bgFloat2 36s ease-in-out infinite; }
+.animate-bg-float-3 { animation: bgFloat3 42s ease-in-out infinite; }
