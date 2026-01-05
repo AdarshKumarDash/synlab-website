@@ -300,6 +300,13 @@ export default function Home() {
       <main className="scroll-smooth min-h-screen pt-[72px] relative overflow-x-hidden text-white">
         {/* ================= GLOBAL WIX-STYLE BACKGROUND ================= */}
         <div className="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
+          <div
+            className="absolute inset-0
+                bg-gradient-to-br
+                from-purple-200/40 to-blue-200/40
+                dark:from-purple-900/40 dark:to-blue-900/40"
+          />
+
           {/* Base gradient */}
           <div
             style={{
@@ -515,7 +522,6 @@ export default function Home() {
                 transition={{ duration: 6, ease: "easeInOut" }}
                 whileHover={{ scale: 1.04, rotate: 1 }}
                 animate={{ y: [0, -10, 0] }}
-                
                 className="relative w-full h-full"
               >
                 <Image
