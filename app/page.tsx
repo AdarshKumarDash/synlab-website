@@ -1,8 +1,20 @@
 "use client";
 
+import { auth } from "@/lib/firebase";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
+
+import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
+
+const isEmail = (value: string) => /^\S+@\S+\.\S+$/.test(value);
+
+const db = getFirestore();
 
 const ecosystemContent: Record<string, string> = {
   Hardware:
@@ -22,6 +34,7 @@ type Particle = { top: number; left: number; delay: number };
 let particleIdCounter = 0;
 
 export default function Home() {
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [showTopArrow, setShowTopArrow] = useState(false);
@@ -213,77 +226,122 @@ export default function Home() {
     return Object.keys(errs).length === 0;
   };
 
+  // ----------------- HELPER FUNCTION -----------------
+  const showFormMessage = (
+    type: "success" | "error",
+    text: string,
+    clearForm: boolean = false
+  ) => {
+    setFormMessage({ type, text });
+
+    // Clear the form if requested
+    if (clearForm) {
+      if (formType === "register") {
+        setRegisterForm({
+          name: "",
+          email: "",
+          phone: "",
+          password: "",
+          confirm: "",
+          terms: false,
+        });
+      } else {
+        setLoginForm({ user: "", password: "" });
+      }
+    }
+
+    // Remove the message after 4 seconds
+    setTimeout(() => setFormMessage(null), 4000);
+  };
+
   // ----------------- HANDLE REGISTER -----------------
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateRegister()) {
-      // Extract user details
-      const { name, email, phone, password } = registerForm;
-      const user = { name, email, phone, password };
 
-      localStorage.setItem("user", JSON.stringify(user));
+    if (!validateRegister()) {
+      showFormMessage("error", "Please fix the errors above and try again.");
+      return;
+    }
 
-      // Show success message
-      setFormMessage({ type: "success", text: "Registration Successful!" });
-      setRegisterForm({
-        name: "",
-        email: "",
-        phone: "",
-        password: "",
-        confirm: "",
-        terms: false,
+    const { name, email, phone, password } = registerForm;
+
+    try {
+      // 1️⃣ Create Auth user
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const uid = userCredential.user.uid;
+
+      // 2️⃣ Store profile in Firestore
+      await setDoc(doc(db, "users", uid), {
+        name,
+        email,
+        phone,
+        createdAt: new Date(),
       });
 
-      // Clear message after 5s
-      setTimeout(() => setFormMessage(null), 5000);
-    } else {
-      setFormMessage({
-        type: "error",
-        text: "Please fix the errors above and try again.",
-      });
-      setTimeout(() => setFormMessage(null), 5000);
+      // ✅ Show success and clear form
+      showFormMessage(
+        "success",
+        "Registration successful! You can now log in.",
+        true
+      );
+    } catch (error: any) {
+      showFormMessage("error", error.message || "Registration failed");
     }
   };
 
-  // ----------------- HANDLE LOGIN -----------------
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateLogin()) {
-      const storedUser = localStorage.getItem("user");
-      if (!storedUser) {
-        setFormMessage({
-          type: "error",
-          text: "No registered user found. Please register first.",
-        });
-        setTimeout(() => setFormMessage(null), 5000);
-        return;
-      }
 
-      const user = JSON.parse(storedUser);
-      if (
-        (loginForm.user === user.name || loginForm.user === user.email) &&
-        loginForm.password === user.password
-      ) {
-        setFormMessage({
-          type: "success",
-          text: `Login Successful! Welcome ${user.name}`,
-        });
-        console.log("Redirect to dashboard...");
+    if (!validateLogin()) {
+      showFormMessage("error", "Please fix the errors above and try again.");
+      return;
+    }
 
-        setTimeout(() => setFormMessage(null), 5000);
+    try {
+      let email = loginForm.user;
+      let userName = "";
+
+      // 🔍 If user entered name instead of email
+      if (!isEmail(loginForm.user)) {
+        const q = query(
+          collection(db, "users"),
+          where("name", "==", loginForm.user)
+        );
+        const snap = await getDocs(q);
+
+        if (!snap.empty) {
+          const userData = snap.docs[0].data();
+          email = userData.email;
+          userName = userData.name;
+        }
       } else {
-        setFormMessage({
-          type: "error",
-          text: "Invalid username/email or password!",
-        });
-        setTimeout(() => setFormMessage(null), 5000);
+        // If user entered email
+        const q = query(
+          collection(db, "users"),
+          where("email", "==", loginForm.user)
+        );
+        const snap = await getDocs(q);
+
+        if (!snap.empty) {
+          const userData = snap.docs[0].data();
+          userName = userData.name;
+        }
       }
-    } else {
-      setFormMessage({
-        type: "error",
-        text: "Please fix the errors above and try again.",
-      });
-      setTimeout(() => setFormMessage(null), 5000);
+
+      // 🔐 Login with resolved email
+      await signInWithEmailAndPassword(auth, email, loginForm.password);
+
+      showFormMessage(
+        "success",
+        `Welcome back${userName ? `, ${userName}` : ""}!`,
+        true
+      );
+    } catch (err: any) {
+      showFormMessage("error", "Invalid credentials");
     }
   };
 
