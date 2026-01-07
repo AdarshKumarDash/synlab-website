@@ -1,6 +1,7 @@
 // lib/firebase.ts
-import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getAuth, Auth } from "firebase/auth";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
@@ -11,10 +12,11 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
 };
 
-// Initialize Firebase app only once
-export const app: FirebaseApp =
+export const app =
   getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-// Auth will only exist on client-side
-export const auth: Auth | null =
-  typeof window !== "undefined" ? getAuth(app) : null;
+// ✅ ALWAYS create auth (never null)
+export const auth = getAuth(app);
+
+// ✅ Create db once
+export const db = getFirestore(app);

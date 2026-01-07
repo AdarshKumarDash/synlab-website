@@ -1,12 +1,13 @@
 "use client";
 
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 
 export const dynamic = "force-dynamic";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { app } from "@/lib/firebase";
+import { sendPasswordResetEmail } from "firebase/auth";
 
 import {
   createUserWithEmailAndPassword,
@@ -36,21 +37,10 @@ type Particle = { top: number; left: number; delay: number };
 let particleIdCounter = 0;
 
 export default function Home() {
-  if (!auth) {
-    console.warn("Firebase auth not ready");
-    return null;
-  }
+  const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [showTopArrow, setShowTopArrow] = useState(false);
-
-  const [db, setDb] = useState<ReturnType<typeof getFirestore> | null>(null);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setDb(getFirestore(app));
-    }
-  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -310,6 +300,7 @@ export default function Home() {
       showFormMessage("error", error.message || "Registration failed");
     }
   };
+  // ----------------- HANDLE LOGIN -----------------
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -367,6 +358,50 @@ export default function Home() {
       showFormMessage("error", "Invalid credentials");
     }
   };
+  const handleForgotPassword = async () => {
+    if (!loginForm.user.trim()) {
+      setErrors({ user: "Please enter your registered name or email" });
+      return;
+    }
+
+    try {
+      let email = loginForm.user;
+
+      // If user entered a name instead of email, resolve to email from Firestore
+      if (!isEmail(loginForm.user) && db) {
+        const q = query(
+          collection(db, "users"),
+          where("name", "==", loginForm.user)
+        );
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          const userData = snap.docs[0].data();
+          email = userData.email;
+        } else {
+          showFormMessage("error", "User not found");
+          return;
+        }
+      }
+
+      // Send password reset email
+      if (!auth) {
+        showFormMessage("error", "Firebase Auth not initialized yet.");
+        return;
+      }
+      await sendPasswordResetEmail(auth, email);
+
+      showFormMessage(
+        "success",
+        "Password reset email sent! Check your inbox."
+      );
+    } catch (err: any) {
+      console.error(err);
+      showFormMessage(
+        "error",
+        err.message || "Failed to send password reset email"
+      );
+    }
+  };
 
   // Helper function for floating labels
   const getLabelClasses = (value: string) =>
@@ -376,6 +411,12 @@ export default function Home() {
          ? "top-[-8px] text-blue-400 text-xs"
          : "top-4 text-gray-400 text-sm peer-placeholder-shown:top-4 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-sm peer-focus:top-[-8px] peer-focus:text-blue-400 peer-focus:text-xs capitalize"
      }`;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null; // Render nothing on server
+
   return (
     <div className="relative min-h-screen overflow-hidden">
       <main className="scroll-smooth min-h-screen pt-[72px] relative overflow-x-hidden text-white">
@@ -993,10 +1034,15 @@ export default function Home() {
                   )}
 
                   <div className="text-right text-sm">
-                    <a href="#" className="text-blue-400 underline">
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      className="text-blue-400 underline"
+                    >
                       Forgot password?
-                    </a>
+                    </button>
                   </div>
+
                   <button
                     type="submit"
                     className="mt-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg font-semibold transition-all transform hover:scale-105 hover:shadow-lg text-white"
