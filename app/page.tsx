@@ -1,9 +1,12 @@
 "use client";
 
+export const dynamic = "force-dynamic";
 import { auth } from "@/lib/firebase";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
+import { app } from "@/lib/firebase";
+
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -13,8 +16,6 @@ import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 import { collection, query, where, getDocs } from "firebase/firestore";
 
 const isEmail = (value: string) => /^\S+@\S+\.\S+$/.test(value);
-
-const db = getFirestore();
 
 const ecosystemContent: Record<string, string> = {
   Hardware:
@@ -34,10 +35,18 @@ type Particle = { top: number; left: number; delay: number };
 let particleIdCounter = 0;
 
 export default function Home() {
-
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [showTopArrow, setShowTopArrow] = useState(false);
+
+  const [db, setDb] = useState<ReturnType<typeof getFirestore> | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setDb(getFirestore(app));
+    }
+  }, []);
+
   useEffect(() => {
     const handleScroll = () => {
       setShowTopArrow(window.scrollY > 300); // show after scrolling 300px
@@ -257,6 +266,10 @@ export default function Home() {
   // ----------------- HANDLE REGISTER -----------------
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!auth || !db) {
+      showFormMessage("error", "Firebase not ready. Please try again.");
+      return;
+    }
 
     if (!validateRegister()) {
       showFormMessage("error", "Please fix the errors above and try again.");
@@ -295,6 +308,11 @@ export default function Home() {
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!auth || !db) {
+      showFormMessage("error", "Firebase not ready. Please try again.");
+      return;
+    }
 
     if (!validateLogin()) {
       showFormMessage("error", "Please fix the errors above and try again.");
