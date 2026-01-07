@@ -1,7 +1,8 @@
 "use client";
 
-export const dynamic = "force-dynamic";
 import { auth } from "@/lib/firebase";
+
+export const dynamic = "force-dynamic";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -35,6 +36,10 @@ type Particle = { top: number; left: number; delay: number };
 let particleIdCounter = 0;
 
 export default function Home() {
+  if (!auth) {
+    console.warn("Firebase auth not ready");
+    return null;
+  }
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [showTopArrow, setShowTopArrow] = useState(false);

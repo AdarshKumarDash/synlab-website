@@ -1,4 +1,5 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
+// lib/firebase.ts
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
 
 const firebaseConfig = {
@@ -10,12 +11,10 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
 };
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+// Initialize Firebase app only once
+export const app: FirebaseApp =
+  getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-let auth: Auth | null = null;
-
-if (typeof window !== "undefined") {
-  auth = getAuth(app);
-}
-
-export { auth, app };
+// Auth will only exist on client-side
+export const auth: Auth | null =
+  typeof window !== "undefined" ? getAuth(app) : null;
