@@ -304,60 +304,48 @@ export default function Home() {
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("PROJECT:", auth.app.options.projectId);
 
-    if (!auth || !db) {
-      showFormMessage("error", "Firebase not ready. Please try again.");
-      return;
-    }
-
-    if (!validateLogin()) {
-      showFormMessage("error", "Please fix the errors above and try again.");
-      return;
-    }
+    if (!validateLogin()) return;
 
     try {
-      let email = loginForm.user;
-      let userName = "";
+      let email = loginForm.user.trim();
 
-      // 🔍 If user entered name instead of email
-      if (!isEmail(loginForm.user)) {
-        const q = query(
-          collection(db, "users"),
-          where("name", "==", loginForm.user)
-        );
+      // ❌ If user entered name → resolve email ONCE
+      if (!isEmail(email)) {
+        const q = query(collection(db, "users"), where("name", "==", email));
         const snap = await getDocs(q);
 
-        if (!snap.empty) {
-          const userData = snap.docs[0].data();
-          email = userData.email;
-          userName = userData.name;
+        if (snap.empty) {
+          showFormMessage("error", "User not found");
+          return;
         }
-      } else {
-        // If user entered email
-        const q = query(
-          collection(db, "users"),
-          where("email", "==", loginForm.user)
-        );
-        const snap = await getDocs(q);
 
-        if (!snap.empty) {
-          const userData = snap.docs[0].data();
-          userName = userData.name;
-        }
+        email = snap.docs[0].data().email;
       }
 
-      // 🔐 Login with resolved email
-      await signInWithEmailAndPassword(auth, email, loginForm.password);
+      // ✅ AUTH FIRST
+      const cred = await signInWithEmailAndPassword(
+        auth,
+        email,
+        loginForm.password
+      );
+
+      // ✅ THEN Firestore (optional)
+      const userDoc = await getDoc(doc(db, "users", cred.user.uid));
+      const userName = userDoc.exists() ? userDoc.data().name : "";
 
       showFormMessage(
         "success",
         `Welcome back${userName ? `, ${userName}` : ""}!`,
         true
       );
-    } catch (err: any) {
+    } catch (err) {
       showFormMessage("error", "Invalid credentials");
     }
   };
+
+  // ----------------- HANDLE FORGOT PASSWORD -----------------
   const handleForgotPassword = async () => {
     if (!loginForm.user.trim()) {
       setErrors({ user: "Please enter your registered name or email" });
