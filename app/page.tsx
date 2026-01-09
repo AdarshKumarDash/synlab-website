@@ -266,16 +266,37 @@ export default function Home() {
 
     try {
       const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // 🔍 CHECK IF USER IS REGISTERED (Firestore)
+      const q = query(
+        collection(db, "users"),
+        where("email", "==", user.email)
+      );
+      const snap = await getDocs(q);
+
+      if (snap.empty) {
+        // ❌ Not registered → force logout
+        await auth.signOut();
+
+        showFormMessage(
+          "error",
+          "This Google account is not registered. Please register first."
+        );
+        return;
+      }
+
+      // ✅ Registered → allow login
+      const userName = snap.docs[0].data().name;
 
       showFormMessage(
         "success",
-        `Welcome back${
-          result.user.displayName ? `, ${result.user.displayName}` : ""
-        }!`,
+        `Welcome back${userName ? `, ${userName}` : ""}!`,
         true
       );
     } catch (error: any) {
       if (error.code === "auth/account-exists-with-different-credential") {
+        // 🔗 ACCOUNT LINKING FLOW (already correct)
         const pendingCred = GoogleAuthProvider.credentialFromError(error);
         const email = error.customData.email;
 
