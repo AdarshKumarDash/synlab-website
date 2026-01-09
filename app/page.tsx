@@ -1,5 +1,14 @@
 "use client";
 
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  linkWithCredential,
+} from "firebase/auth";
+
 import { auth, db } from "@/lib/firebase";
 
 export const dynamic = "force-dynamic";
@@ -7,13 +16,6 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { app } from "@/lib/firebase";
-import { sendPasswordResetEmail } from "firebase/auth";
-
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
-
 import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 import { collection, query, where, getDocs } from "firebase/firestore";
 
@@ -256,6 +258,51 @@ export default function Home() {
 
     // Remove the message after 4 seconds
     setTimeout(() => setFormMessage(null), 4000);
+  };
+
+  const handleGoogleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+
+    try {
+      // Try Google sign-in
+      const result = await signInWithPopup(auth, provider);
+
+      // ✅ If already linked → user is logged in
+      console.log("Google login success:", result.user);
+    } catch (error: any) {
+      // 🔴 This error means:
+      // Email exists with password, but Google not linked yet
+      if (error.code === "auth/account-exists-with-different-credential") {
+        const pendingCred = GoogleAuthProvider.credentialFromError(error);
+        const email = error.customData.email;
+
+        // ⚠️ Ask user for password ONCE (only for linking)
+        const password = prompt(
+          "Enter your password once to link Google login"
+        );
+
+        if (!password) return;
+
+        // Login using email + password
+        const userCred = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+        // 🔗 LINK GOOGLE TO EXISTING ACCOUNT
+        if (!pendingCred) {
+          showFormMessage("error", "Google linking failed. Try again.");
+          return;
+        }
+
+        await linkWithCredential(userCred.user, pendingCred);
+
+        alert("Google account linked successfully!");
+      } else {
+        console.error(error);
+      }
+    }
   };
 
   // ----------------- HANDLE REGISTER -----------------
@@ -865,6 +912,16 @@ export default function Home() {
                   }`}
                 >
                   Login
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  className="mt-4 flex items-center justify-center gap-3 w-full px-6 py-3
+             bg-white text-black rounded-lg font-semibold
+             hover:bg-gray-200 transition-all"
+                >
+                  <img src="/google.svg" alt="Google" className="w-5 h-5" />
+                  Continue with Google
                 </button>
               </div>
 
