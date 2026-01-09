@@ -913,16 +913,6 @@ export default function Home() {
                 >
                   Login
                 </button>
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  className="mt-4 flex items-center justify-center gap-3 w-full px-6 py-3
-             bg-white text-black rounded-lg font-semibold
-             hover:bg-gray-200 transition-all"
-                >
-                  <img src="/google.svg" alt="Google" className="w-5 h-5" />
-                  Continue with Google
-                </button>
               </div>
 
               {/* Forms (register/login) */}
@@ -1093,6 +1083,16 @@ export default function Home() {
                     className="mt-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg font-semibold transition-all transform hover:scale-105 hover:shadow-lg text-white"
                   >
                     Login
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    className="mt-4 flex items-center justify-center gap-3 w-full px-6 py-3
+             bg-white text-black rounded-lg font-semibold
+             hover:bg-gray-200 transition-all"
+                  >
+                    <img src="/google.svg" alt="Google" className="w-5 h-5" />
+                    Continue with Google
                   </button>
                 </motion.form>
               )}
