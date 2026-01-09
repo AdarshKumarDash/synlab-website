@@ -262,35 +262,34 @@ export default function Home() {
 
   const handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider();
+    setFormType("login");
 
     try {
-      // Try Google sign-in
       const result = await signInWithPopup(auth, provider);
 
-      // ✅ If already linked → user is logged in
-      console.log("Google login success:", result.user);
+      showFormMessage(
+        "success",
+        `Welcome back${
+          result.user.displayName ? `, ${result.user.displayName}` : ""
+        }!`,
+        true
+      );
     } catch (error: any) {
-      // 🔴 This error means:
-      // Email exists with password, but Google not linked yet
       if (error.code === "auth/account-exists-with-different-credential") {
         const pendingCred = GoogleAuthProvider.credentialFromError(error);
         const email = error.customData.email;
 
-        // ⚠️ Ask user for password ONCE (only for linking)
         const password = prompt(
           "Enter your password once to link Google login"
         );
-
         if (!password) return;
 
-        // Login using email + password
         const userCred = await signInWithEmailAndPassword(
           auth,
           email,
           password
         );
 
-        // 🔗 LINK GOOGLE TO EXISTING ACCOUNT
         if (!pendingCred) {
           showFormMessage("error", "Google linking failed. Try again.");
           return;
@@ -298,9 +297,13 @@ export default function Home() {
 
         await linkWithCredential(userCred.user, pendingCred);
 
-        alert("Google account linked successfully!");
+        showFormMessage(
+          "success",
+          "Google account linked successfully! You can now log in without password.",
+          true
+        );
       } else {
-        console.error(error);
+        showFormMessage("error", error.message || "Google sign-in failed");
       }
     }
   };
