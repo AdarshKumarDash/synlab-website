@@ -44,6 +44,10 @@ export default function Home() {
   const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [pendingGoogle, setPendingGoogle] = useState<{
+    email: string;
+    credential: any;
+  } | null>(null);
 
   const [showTopArrow, setShowTopArrow] = useState(false);
 
@@ -268,13 +272,13 @@ export default function Home() {
     setFormType("login");
 
     try {
-      // Normal Google sign-in
+      // Try Google login
       const result = await signInWithPopup(auth, provider);
       const gUser = result.user;
 
       if (!gUser.email) return;
 
-      // Check Firestore registration
+      // 🔎 Check if user exists in Firestore
       const q = query(
         collection(db, "users"),
         where("email", "==", gUser.email)
@@ -282,7 +286,7 @@ export default function Home() {
       const snap = await getDocs(q);
 
       if (snap.empty) {
-        // User is NOT registered in your system
+        // ❌ Not registered → rollback Google login
         await auth.signOut();
         showFormMessage(
           "error",
@@ -291,58 +295,31 @@ export default function Home() {
         return;
       }
 
-      // ✅ Registered + already linked OR auto-linked
-      const userName = snap.docs[0].data().name;
+      const userName = snap.docs[0].data().name || "";
       showFormMessage(
         "success",
         `Welcome back${userName ? `, ${userName}` : ""}!`,
         true
       );
     } catch (error: any) {
-      // 🔑 THIS IS THE CRITICAL FIX
+      // 🚨 THIS IS THE IMPORTANT PART
       if (error.code === "auth/account-exists-with-different-credential") {
         const email = error.customData?.email;
-        const pendingCred = GoogleAuthProvider.credentialFromError(error);
+        const credential = GoogleAuthProvider.credentialFromError(error);
 
-        if (!email || !pendingCred) {
+        if (!email || !credential) {
           showFormMessage("error", "Google sign-in failed");
           return;
         }
 
-        try {
-          // User MUST confirm password (use existing login form password)
-          const password = loginForm.password;
-          if (!password) {
-            showFormMessage(
-              "error",
-              "Please enter your password to link Google account"
-            );
-            return;
-          }
+        // ⛔ DO NOT LOGIN GOOGLE
+        // Ask for password instead
+        setPendingGoogle({ email, credential });
 
-          // 1️⃣ Sign in with email/password FIRST
-          const userCred = await signInWithEmailAndPassword(
-            auth,
-            email,
-            password
-          );
-
-          // 2️⃣ LINK Google provider
-          await linkWithCredential(userCred.user, pendingCred);
-
-          // 3️⃣ Fetch Firestore profile
-          const userDoc = await getDoc(doc(db, "users", userCred.user.uid));
-          const userName = userDoc.exists() ? userDoc.data().name : "";
-
-          showFormMessage(
-            "success",
-            `Welcome back${userName ? `, ${userName}` : ""}!`,
-            true
-          );
-        } catch {
-          showFormMessage("error", "Invalid password. Linking failed.");
-        }
-
+        showFormMessage(
+          "error",
+          "Account exists. Please enter your password to link Google."
+        );
         return;
       }
 
@@ -422,6 +399,11 @@ export default function Home() {
         email,
         loginForm.password
       );
+      // 🔗 LINK GOOGLE IF PENDING
+      if (pendingGoogle && pendingGoogle.email === email) {
+        await linkWithCredential(cred.user, pendingGoogle.credential);
+        setPendingGoogle(null);
+      }
 
       // ✅ THEN Firestore (optional)
       const userDoc = await getDoc(doc(db, "users", cred.user.uid));
