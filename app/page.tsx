@@ -276,7 +276,8 @@ export default function Home() {
       const snap = await getDocs(q);
 
       if (snap.empty) {
-        // ❌ Not registered → force logout
+        // 🚨 DELETE AUTH USER (VERY IMPORTANT)
+        await user.delete();
         await auth.signOut();
 
         showFormMessage(
@@ -1115,7 +1116,11 @@ export default function Home() {
              bg-white text-black rounded-lg font-semibold
              hover:bg-gray-200 transition-all"
                   >
-                    <img src="C:\Users\ambik\synlab-website\public\google.png" alt="Google" className="w-5 h-5" />
+                    <img
+                      src="C:\Users\ambik\synlab-website\public\google.png"
+                      alt="Google"
+                      className="w-5 h-5"
+                    />
                     Continue with Google
                   </button>
                 </motion.form>
