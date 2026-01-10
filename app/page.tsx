@@ -403,9 +403,10 @@ export default function Home() {
       );
 
       // 🔗 Link Google if pending
-      if (pendingGoogle && pendingGoogle.email === email) {
+      if (pendingGoogle && pendingGoogle.email.trim() === email.trim()) {
         await linkWithCredential(cred.user, pendingGoogle.credential);
         setPendingGoogle(null);
+        showFormMessage("success", "Google account linked successfully!");
       }
 
       // Firestore fetch
@@ -1077,6 +1078,13 @@ export default function Home() {
                   </div>
 
                   <div className="relative">
+                    {pendingGoogle && (
+                      <p className="text-yellow-300 text-sm mb-2 px-2 py-1 rounded bg-yellow-600/20">
+                        Pending Google linking for {pendingGoogle.email}. Please
+                        login with your password first.
+                      </p>
+                    )}
+
                     <input
                       type="password"
                       value={loginForm.password}
@@ -1131,6 +1139,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={handleGoogleLogin}
+                    disabled={!!pendingGoogle}
                     className="touch-effect mt-4 flex items-center justify-center gap-3 w-full px-6 py-3
              bg-white text-black rounded-lg font-semibold
              hover:bg-gray-200 transition-all"
