@@ -38,3 +38,11 @@ body {
 .animate-bg-float-1 { animation: bgFloat1 30s ease-in-out infinite; }
 .animate-bg-float-2 { animation: bgFloat2 36s ease-in-out infinite; }
 .animate-bg-float-3 { animation: bgFloat3 42s ease-in-out infinite; }
+
+/* Touch device active effect */
+@media (hover: none) and (pointer: coarse) {
+  .touch-effect:active {
+    transform: scale(0.95);
+    opacity: 0.85;
+  }
+}

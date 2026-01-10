@@ -1,4 +1,5 @@
 "use client";
+import Navbar from "@/components/Navbar";
 
 import {
   GoogleAuthProvider,
@@ -8,6 +9,7 @@ import {
   sendPasswordResetEmail,
   linkWithCredential,
 } from "firebase/auth";
+import { useAuth } from "@/components/AuthProvider";
 
 import { auth, db } from "@/lib/firebase";
 
@@ -39,6 +41,7 @@ type Particle = { top: number; left: number; delay: number };
 let particleIdCounter = 0;
 
 export default function Home() {
+  const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -480,6 +483,11 @@ export default function Home() {
   return (
     <div className="relative min-h-screen overflow-hidden">
       <main className="scroll-smooth min-h-screen pt-[72px] relative overflow-x-hidden text-white">
+        {user && (
+          <div className="mx-6 md:mx-16 mt-4 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 p-4 text-white">
+            Welcome back, <b>{user.displayName?.split(" ")[0] || "User"}</b> 👋
+          </div>
+        )}
         {/* ================= GLOBAL WIX-STYLE BACKGROUND ================= */}
         <div className="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
           <div
@@ -1024,7 +1032,7 @@ export default function Home() {
 
                   <button
                     type="submit"
-                    className="mt-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg font-semibold transition-all transform hover:scale-105 hover:shadow-lg text-white"
+                    className="touch-effect mt-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg font-semibold transition-all transform hover:scale-105 hover:shadow-lg text-white"
                   >
                     Register
                   </button>
@@ -1105,19 +1113,19 @@ export default function Home() {
 
                   <button
                     type="submit"
-                    className="mt-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg font-semibold transition-all transform hover:scale-105 hover:shadow-lg text-white"
+                    className="touch-effect mt-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg font-semibold transition-all transform hover:scale-105 hover:shadow-lg text-white"
                   >
                     Login
                   </button>
                   <button
                     type="button"
                     onClick={handleGoogleLogin}
-                    className="mt-4 flex items-center justify-center gap-3 w-full px-6 py-3
+                    className="touch-effect mt-4 flex items-center justify-center gap-3 w-full px-6 py-3
              bg-white text-black rounded-lg font-semibold
              hover:bg-gray-200 transition-all"
                   >
                     <img
-                      src="C:\Users\ambik\synlab-website\public\google.png"
+                      src="/google.png"
                       alt="Google"
                       className="w-5 h-5"
                     />

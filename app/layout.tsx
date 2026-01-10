@@ -2,12 +2,24 @@
 
 import "./globals.css";
 import { useEffect, useState } from "react";
+import { AuthProvider } from "@/components/AuthProvider";
+import Navbar from "@/components/Navbar";
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  return (
+    <html lang="en">
+      <body>
+        <AuthProvider>
+          <Navbar />
+          {children}
+        </AuthProvider>
+      </body>
+    </html>
+  );
   const [theme, setTheme] = useState<"light" | "dark">("dark");
 
   useEffect(() => {
@@ -26,9 +38,7 @@ export default function RootLayout({
 
         {/* THEME TOGGLE BUTTON */}
         <button
-          onClick={() =>
-            setTheme(theme === "dark" ? "light" : "dark")
-          }
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           className="fixed bottom-4 left-4 z-50 rounded-full border border-gray-400 bg-white px-4 py-2 text-sm font-medium text-black shadow dark:bg-black dark:text-white"
         >
           {theme === "dark" ? "☀ Light" : "🌙 Dark"}
