@@ -268,12 +268,13 @@ export default function Home() {
     setFormType("login");
 
     try {
+      // Normal Google sign-in
       const result = await signInWithPopup(auth, provider);
       const gUser = result.user;
 
       if (!gUser.email) return;
 
-      // 🔍 Check Firestore registration
+      // Check Firestore registration
       const q = query(
         collection(db, "users"),
         where("email", "==", gUser.email)
@@ -281,9 +282,8 @@ export default function Home() {
       const snap = await getDocs(q);
 
       if (snap.empty) {
-        // ❌ DO NOT delete auth user
+        // User is NOT registered in your system
         await auth.signOut();
-
         showFormMessage(
           "error",
           "This Google account is not registered. Please register first."
@@ -291,15 +291,61 @@ export default function Home() {
         return;
       }
 
-      // ✅ Registered user → success
+      // ✅ Registered + already linked OR auto-linked
       const userName = snap.docs[0].data().name;
-
       showFormMessage(
         "success",
         `Welcome back${userName ? `, ${userName}` : ""}!`,
         true
       );
     } catch (error: any) {
+      // 🔑 THIS IS THE CRITICAL FIX
+      if (error.code === "auth/account-exists-with-different-credential") {
+        const email = error.customData?.email;
+        const pendingCred = GoogleAuthProvider.credentialFromError(error);
+
+        if (!email || !pendingCred) {
+          showFormMessage("error", "Google sign-in failed");
+          return;
+        }
+
+        try {
+          // User MUST confirm password (use existing login form password)
+          const password = loginForm.password;
+          if (!password) {
+            showFormMessage(
+              "error",
+              "Please enter your password to link Google account"
+            );
+            return;
+          }
+
+          // 1️⃣ Sign in with email/password FIRST
+          const userCred = await signInWithEmailAndPassword(
+            auth,
+            email,
+            password
+          );
+
+          // 2️⃣ LINK Google provider
+          await linkWithCredential(userCred.user, pendingCred);
+
+          // 3️⃣ Fetch Firestore profile
+          const userDoc = await getDoc(doc(db, "users", userCred.user.uid));
+          const userName = userDoc.exists() ? userDoc.data().name : "";
+
+          showFormMessage(
+            "success",
+            `Welcome back${userName ? `, ${userName}` : ""}!`,
+            true
+          );
+        } catch {
+          showFormMessage("error", "Invalid password. Linking failed.");
+        }
+
+        return;
+      }
+
       showFormMessage("error", error.message || "Google sign-in failed");
     }
   };
