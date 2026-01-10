@@ -372,14 +372,12 @@ export default function Home() {
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("PROJECT:", auth.app.options.projectId);
-
     if (!validateLogin()) return;
 
     try {
       let email = loginForm.user.trim();
 
-      // ❌ If user entered name → resolve email ONCE
+      // If user entered name → resolve email
       if (!isEmail(email)) {
         const q = query(collection(db, "users"), where("name", "==", email));
         const snap = await getDocs(q);
@@ -392,19 +390,25 @@ export default function Home() {
         email = snap.docs[0].data().email;
       }
 
-      // ✅ AUTH FIRST
+      // ✅ SIGN OUT CURRENT USER FIRST
+      if (auth.currentUser) {
+        await auth.signOut();
+      }
+
+      // ✅ Then email/password login
       const cred = await signInWithEmailAndPassword(
         auth,
         email,
         loginForm.password
       );
-      // 🔗 LINK GOOGLE IF PENDING
+
+      // 🔗 Link Google if pending
       if (pendingGoogle && pendingGoogle.email === email) {
         await linkWithCredential(cred.user, pendingGoogle.credential);
         setPendingGoogle(null);
       }
 
-      // ✅ THEN Firestore (optional)
+      // Firestore fetch
       const userDoc = await getDoc(doc(db, "users", cred.user.uid));
       const userName = userDoc.exists() ? userDoc.data().name : "";
 
@@ -414,6 +418,7 @@ export default function Home() {
         true
       );
     } catch (err) {
+      console.error(err);
       showFormMessage("error", "Invalid credentials");
     }
   };
