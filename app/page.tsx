@@ -1,6 +1,7 @@
 "use client";
 import Navbar from "@/components/Navbar";
 
+import { fetchSignInMethodsForEmail } from "firebase/auth";
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -272,13 +273,33 @@ export default function Home() {
     setFormType("login");
 
     try {
-      // Try Google login
+      // 1️⃣ Ask user to pick Google account (no login yet)
       const result = await signInWithPopup(auth, provider);
       const gUser = result.user;
 
       if (!gUser.email) return;
 
-      // 🔎 Check if user exists in Firestore
+      // 2️⃣ Check which providers already exist
+      const methods = await fetchSignInMethodsForEmail(auth, gUser.email);
+
+      // 3️⃣ If password already exists → block Google-only login
+      if (methods.includes("password") && !methods.includes("google.com")) {
+        // ⛔ Roll back Google login
+        await auth.signOut();
+
+        setPendingGoogle({
+          email: gUser.email,
+          credential: GoogleAuthProvider.credentialFromResult(result),
+        });
+
+        showFormMessage(
+          "error",
+          "Account exists with password. Please login using password to link Google."
+        );
+        return;
+      }
+
+      // 4️⃣ Check Firestore registration
       const q = query(
         collection(db, "users"),
         where("email", "==", gUser.email)
@@ -286,7 +307,6 @@ export default function Home() {
       const snap = await getDocs(q);
 
       if (snap.empty) {
-        // ❌ Not registered → rollback Google login
         await auth.signOut();
         showFormMessage(
           "error",
@@ -301,29 +321,8 @@ export default function Home() {
         `Welcome back${userName ? `, ${userName}` : ""}!`,
         true
       );
-    } catch (error: any) {
-      // 🚨 THIS IS THE IMPORTANT PART
-      if (error.code === "auth/account-exists-with-different-credential") {
-        const email = error.customData?.email;
-        const credential = GoogleAuthProvider.credentialFromError(error);
-
-        if (!email || !credential) {
-          showFormMessage("error", "Google sign-in failed");
-          return;
-        }
-
-        // ⛔ DO NOT LOGIN GOOGLE
-        // Ask for password instead
-        setPendingGoogle({ email, credential });
-
-        showFormMessage(
-          "error",
-          "Account exists. Please enter your password to link Google."
-        );
-        return;
-      }
-
-      showFormMessage("error", error.message || "Google sign-in failed");
+    } catch (err: any) {
+      showFormMessage("error", err.message || "Google sign-in failed");
     }
   };
 
