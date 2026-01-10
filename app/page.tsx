@@ -269,18 +269,19 @@ export default function Home() {
 
     try {
       const result = await signInWithPopup(auth, provider);
-      const user = result.user;
+      const gUser = result.user;
 
-      // 🔍 CHECK IF USER IS REGISTERED (Firestore)
+      if (!gUser.email) return;
+
+      // 🔍 Check Firestore registration
       const q = query(
         collection(db, "users"),
-        where("email", "==", user.email)
+        where("email", "==", gUser.email)
       );
       const snap = await getDocs(q);
 
       if (snap.empty) {
-        // 🚨 DELETE AUTH USER (VERY IMPORTANT)
-        await user.delete();
+        // ❌ DO NOT delete auth user
         await auth.signOut();
 
         showFormMessage(
@@ -290,7 +291,7 @@ export default function Home() {
         return;
       }
 
-      // ✅ Registered → allow login
+      // ✅ Registered user → success
       const userName = snap.docs[0].data().name;
 
       showFormMessage(
@@ -299,37 +300,7 @@ export default function Home() {
         true
       );
     } catch (error: any) {
-      if (error.code === "auth/account-exists-with-different-credential") {
-        // 🔗 ACCOUNT LINKING FLOW (already correct)
-        const pendingCred = GoogleAuthProvider.credentialFromError(error);
-        const email = error.customData.email;
-
-        const password = prompt(
-          "Enter your password once to link Google login"
-        );
-        if (!password) return;
-
-        const userCred = await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
-
-        if (!pendingCred) {
-          showFormMessage("error", "Google linking failed. Try again.");
-          return;
-        }
-
-        await linkWithCredential(userCred.user, pendingCred);
-
-        showFormMessage(
-          "success",
-          "Google account linked successfully! You can now log in without password.",
-          true
-        );
-      } else {
-        showFormMessage("error", error.message || "Google sign-in failed");
-      }
+      showFormMessage("error", error.message || "Google sign-in failed");
     }
   };
 
@@ -483,11 +454,6 @@ export default function Home() {
   return (
     <div className="relative min-h-screen overflow-hidden">
       <main className="scroll-smooth min-h-screen pt-[72px] relative overflow-x-hidden text-white">
-        {user && (
-          <div className="mx-6 md:mx-16 mt-4 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 p-4 text-white">
-            Welcome back, <b>{user.displayName?.split(" ")[0] || "User"}</b> 👋
-          </div>
-        )}
         {/* ================= GLOBAL WIX-STYLE BACKGROUND ================= */}
         <div className="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
           <div
@@ -552,7 +518,12 @@ export default function Home() {
               {/* LOGIN / PROFILE */}
               <button className="ml-4 flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 transition">
                 <div className="w-7 h-7 rounded-full bg-blue-400/40" />
-                <span className="text-sm">Login</span>
+                <span className="text-sm">
+                  {user
+                    ? user.displayName?.split(" ")[0] ||
+                      user.email?.split("@")[0]
+                    : "Login"}
+                </span>
               </button>
             </nav>
 
@@ -618,10 +589,18 @@ export default function Home() {
                   <div className="flex items-center gap-4 mt-10 mb-10">
                     <div className="w-12 h-12 rounded-full bg-blue-400/40" />
                     <div>
-                      <p className="text-white font-medium">Guest User</p>
-                      <button className="text-sm text-gray-400 hover:text-blue-400">
-                        Login / Sign up
-                      </button>
+                      <p className="text-white font-medium">
+                        {user
+                          ? user.displayName?.split(" ")[0] ||
+                            user.email?.split("@")[0]
+                          : "Guest User"}
+                      </p>
+
+                      {!user && (
+                        <button className="text-sm text-gray-400 hover:text-blue-400">
+                          Login / Sign up
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -1124,11 +1103,7 @@ export default function Home() {
              bg-white text-black rounded-lg font-semibold
              hover:bg-gray-200 transition-all"
                   >
-                    <img
-                      src="/google.png"
-                      alt="Google"
-                      className="w-5 h-5"
-                    />
+                    <img src="/google.png" alt="Google" className="w-5 h-5" />
                     Continue with Google
                   </button>
                 </motion.form>
